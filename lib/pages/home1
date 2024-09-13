@@ -1,0 +1,1169 @@
+import 'package:fitbuddy2/pages/aclexercise.dart';
+import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+
+class HomeScreen extends StatefulWidget {
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool _isExerciseMenuOpen = false;
+  late stt.SpeechToText _speech;
+  bool _isListening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _speech = stt.SpeechToText();
+  }
+
+  Future<void> _toggleExerciseMenu() async {
+    setState(() {
+      _isExerciseMenuOpen = !_isExerciseMenuOpen;
+    });
+  }
+
+  void _startListening() async {
+    bool available = await _speech.initialize(
+      onStatus: (val) => print('onStatus: $val'),
+      onError: (val) => print('onError: $val'),
+    );
+    if (available) {
+      setState(() => _isListening = true);
+      _speech.listen(
+        onResult: (val) {
+          setState(() {
+            if (val.hasConfidenceRating && val.confidence > 0) {
+              String command = val.recognizedWords.toLowerCase();
+              print("Recognized command: $command");
+              if (command.contains('open exercise')) {
+                _toggleExerciseMenu();
+              } else if (command.contains('close exercise')) {
+                _toggleExerciseMenu();
+              }
+              _speech.stop();
+              _isListening = false;
+            }
+          });
+        },
+      );
+    } else {
+      print("Speech recognition is not available.");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('FitBuddy Home'),
+        actions: [
+          IconButton(
+            icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
+            onPressed: _startListening,
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          // Bagian atas dari body, misalnya background atau konten lain
+          Positioned.fill(
+            child: Column(
+              children: [
+                // Konten lain bisa ditambahkan di sini
+              ],
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Home Screen'),
+                  SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _toggleExerciseMenu,
+                    child: Text(_isExerciseMenuOpen
+                        ? 'Close Exercise'
+                        : 'Open Exercise'),
+                  ),
+                  SizedBox(height: 20),
+                  if (_isExerciseMenuOpen)
+                    SizedBox(
+                      height: 200, // Atur tinggi sesuai kebutuhan
+                      child: chest(),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      // Align(
+      //   alignment: Alignment.bottomCenter,
+      //   child: Padding(
+      //     padding: const EdgeInsets.all(20.0),
+      //     child: FloatingActionButton(onPressed: _startListening),
+      //   ),
+      // ),
+    );
+  }
+}
+
+import 'package:fitbuddy2/pages/aclexercise.dart';
+import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_to_text.dart';
+
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final SpeechToText _speechToText = SpeechToText();
+
+  bool _speechEnabled = false;
+  String _wordsSpoken = "";
+  double _confidenceLevel = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    initSpeech();
+  }
+
+  void initSpeech() async {
+    _speechEnabled = await _speechToText.initialize();
+    setState(() {});
+  }
+
+  void _startListening() async {
+    await _speechToText.listen(onResult: _onSpeechResult);
+    setState(() {
+      _confidenceLevel = 0;
+    });
+  }
+
+  void _stopListening() async {
+    await _speechToText.stop();
+    setState(() {});
+  }
+
+  void _onSpeechResult(result) {
+    setState(() {
+      _wordsSpoken = result.recognizedWords.toLowerCase();
+      _confidenceLevel = result.confidence;
+
+      // Open specific page based on voice command
+      if (_confidenceLevel > 0.5) {
+        // Adjust confidence threshold as needed
+        if (_wordsSpoken.contains('open back')) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => back()),
+          );
+          // } else if (_wordsSpoken.contains('open diet')) {
+          //   Navigator.push(
+          //     context,
+          //     MaterialPageRoute(builder: (context) => ()),
+          //   );
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.red,
+        title: const Text(
+          'Speech Demo',
+          style: TextStyle(color: Colors.white),
+        ),
+        centerTitle: true,
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                _speechToText.isListening
+                    ? "Listening..."
+                    : _speechEnabled
+                        ? "Tap the microphone to start listening..."
+                        : "Speech not available",
+                style: const TextStyle(fontSize: 20.0),
+              ),
+            ),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  _wordsSpoken,
+                  style: const TextStyle(
+                    fontSize: 25,
+                    fontWeight: FontWeight.w300,
+                  ),
+                ),
+              ),
+            ),
+            if (_speechToText.isNotListening && _confidenceLevel > 0)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 100),
+                child: Text(
+                  "Confidence: ${(_confidenceLevel * 100).toStringAsFixed(1)}%",
+                  style: const TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w200,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: FloatingActionButton(
+        onPressed: _speechToText.isListening ? _stopListening : _startListening,
+        tooltip: 'Listen',
+        child: Icon(
+          _speechToText.isNotListening ? Icons.mic_off : Icons.mic,
+          color: Colors.white,
+        ),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
+
+//login_Controller yang lama
+import 'package:get/get.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
+class LoginController extends GetxController {
+  var googleSignin = GoogleSignIn();
+  var googleAccount = Rx<GoogleSignInAccount?>(null);
+
+  login() async {
+    googleAccount.value = await googleSignin.signIn();
+  }
+
+  logout() async {
+    googleAccount.value = await googleSignin.signOut();
+  }
+
+  String? getDisplayName() {
+    if (googleAccount.value != null) {
+      return googleAccount.value!.displayName;
+    }
+    return null;
+  }
+
+  String? getEmail() {
+    if (googleAccount.value != null) {
+      return googleAccount.value!.email;
+    }
+    return null;
+  }
+
+  String? getID() {
+    if (googleAccount.value != null) {
+      return googleAccount.value!.id;
+    }
+    return null;
+  }
+}
+
+// login.dart yang lama
+import 'package:firebase_database/firebase_database.dart';
+import 'package:fitbuddy2/controller/login_controller.dart';
+import 'package:fitbuddy2/pages/home.dart';
+import 'package:fitbuddy2/pages/insertdata.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+class loginPage extends StatefulWidget {
+  const loginPage({super.key});
+
+  @override
+  State<loginPage> createState() => _loginPageState();
+}
+
+class _loginPageState extends State<loginPage> {
+  final controller = Get.put(LoginController());
+  DatabaseReference dbRef =
+      FirebaseDatabase.instance.ref().child('profile').child('user');
+
+  bool? cekUser;
+
+  _getUserData() async {
+    DataSnapshot snapshot =
+        await dbRef.child(controller.getID().toString()).get();
+
+    if (snapshot.exists) {
+      setState(() {
+        cekUser = true;
+      });
+    } else {
+      setState(() {
+        cekUser = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Color(0xFF121212),
+      body: Center(
+        child: Obx(() {
+          if (controller.googleAccount.value == null)
+            return buildLogin();
+          else
+            return buildAlert();
+        }),
+      ),
+    );
+  }
+
+  Container buildAlert() {
+    return Container(
+      child: AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Color.fromARGB(255, 74, 74, 74),
+        title: const Center(
+          child: Text(
+            "Login Success",
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+        content: Container(
+          height: 50,
+          width: 200,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
+                    backgroundColor: const Color.fromARGB(255, 21, 21, 21)),
+                onPressed: () async {
+                  _getUserData();
+                  await Future.delayed(Duration(seconds: 2));
+                  print(cekUser);
+                  if (cekUser == true) {
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => HomePage()));
+                  }
+                  if (cekUser == false) {
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => InsertData()));
+                  }
+                },
+                child: const Text(
+                  "OK",
+                  style: TextStyle(
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Column buildLogin() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 250,
+          height: 250,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            image: DecorationImage(
+                image: AssetImage('assets/images/fbr1.png'), fit: BoxFit.cover),
+          ),
+        ),
+        const SizedBox(
+          height: 50,
+        ),
+        const Text(
+          "Login with : ",
+          style: TextStyle(
+            fontSize: 20,
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(
+          height: 10,
+        ),
+        ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            padding: const EdgeInsets.all(15),
+            backgroundColor: Color.fromARGB(255, 51, 51, 51),
+            foregroundColor: Colors.white,
+          ),
+          onPressed: () async {
+            await controller.login();
+            dbRef.child(controller.googleAccount.value!.id.toString()).update({
+              // 'nama': controller.googleAccount.value?.displayName.toString(),
+              'email': controller.googleAccount.value?.email.toString()
+            });
+            ;
+          },
+          icon: Image.asset('assets/images/google.png'),
+          label: const Text("Sign In With Google"),
+        ),
+      ],
+    );
+  }
+}
+
+
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+class aclPage extends StatefulWidget {
+  const aclPage({super.key});
+
+  @override
+  State<aclPage> createState() => _aclPageState();
+}
+
+class _aclPageState extends State<aclPage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Color(0xFF121212),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            backgroundColor: Color(0xFF121212),
+            leading: IconButton(
+              icon: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: Colors.white,
+              ),
+              onPressed: () {
+                Get.back();
+              },
+            ),
+            expandedHeight: 50,
+            pinned: true,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                color: Colors.blueAccent[900],
+              ),
+              title: Text(
+                "ACL EXERCISE",
+                style: TextStyle(color: Colors.white),
+              ),
+              centerTitle: true,
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: EdgeInsets.all(20.0),
+                  color: const Color.fromARGB(255, 255, 255, 255),
+                  height: 420,
+                  child: Column(
+                    children: [
+                      Text(
+                        "1. Quads Set",
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.justify,
+                      ),
+                      SizedBox(height: 5),
+                      Column(
+                        children: [
+                          Container(
+                            width: 200,
+                            // child: Image.asset(""), // Add your image here if needed
+                          ),
+                          SizedBox(height: 5),
+                          Text(
+                            "Tujuan: Mengaktifkan dan memperkuat otot quadriceps tanpa menekuk lutut.",
+                            textAlign: TextAlign.justify,
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 5),
+                          Text(
+                            "1. Duduk di lantai dengan kaki lurus di depan.",
+                            textAlign: TextAlign.justify,
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            "2. Tekan bagian belakang lutut yang cedera ke lantai dengan cara menegangkan otot paha (quad).",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            "3. Tahan selama 5-10 detik, lalu rileks.",
+                            textAlign: TextAlign.justify,
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            "4. Ulangi 10-15 reps, 2-3 set sehari.",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 10),
+                          // Add link with url_launcher
+                          RichText(
+                            text: TextSpan(
+                              text:
+                                  'Klik Video di bawah sini untuk lebih lanjut',
+                              style: TextStyle(color: Colors.black),
+                              children: [
+                                TextSpan(
+                                  text: 'this link',
+                                  style: TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () async {
+                                      final Uri url = Uri.parse(
+                                          'https://www.youtube.com/watch?v=IF5eDfb8afM');
+                                      if (await canLaunchUrl(url)) {
+                                        await launchUrl(url); // Open the URL
+                                      } else {
+                                        throw 'Could not launch $url';
+                                      }
+                                    },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    children: [
+                      Text(
+                        "2. Straight Leg Raises",
+                        style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.justify,
+                      ),
+                      SizedBox(
+                        height: 5,
+                      ),
+                      Column(
+                        children: [
+                          Container(
+                            width: 200,
+                            // child: Image.asset(""),
+                          ),
+                          SizedBox(
+                            height: 5,
+                          ),
+                          Text(
+                            "Tujuan: Menguatkan otot paha tanpa memberi tekanan pada lutut.",
+                            textAlign: TextAlign.justify,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "1. Berbaring telentang dengan satu kaki lurus dan satu kaki ditekuk.",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "2. Angkat kaki yang lurus hingga sejajar dengan kaki yang ditekuk.",
+                            textAlign: TextAlign.justify,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "3. Tahan selama beberapa detik, kemudian turunkan perlahan.",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "4. Ulangi 10-15 kali per set, 2-3 set sehari.",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          RichText(
+                            text: TextSpan(
+                              text:
+                                  'Klik Video di bawah sini untuk lebih lanjut',
+                              style: TextStyle(color: Colors.black),
+                              children: [
+                                TextSpan(
+                                  text: 'this link',
+                                  style: TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () async {
+                                      final Uri url = Uri.parse(
+                                          'https://www.youtube.com/watch?v=IF5eDfb8afM');
+                                      if (await canLaunchUrl(url)) {
+                                        await launchUrl(url); // Open the URL
+                                      } else {
+                                        throw 'Could not launch $url';
+                                      }
+                                    },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  height: 420,
+                  color: const Color.fromARGB(255, 255, 255, 255),
+                ),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: EdgeInsets.all(20.0),
+                  child: Column(
+                    children: [
+                      Text(
+                        "3. Heel Slides",
+                        style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.justify,
+                      ),
+                      SizedBox(
+                        height: 5,
+                      ),
+                      Column(
+                        children: [
+                          Container(
+                            width: 200,
+                            // child: Image.asset(""),
+                          ),
+                          SizedBox(
+                            height: 5,
+                          ),
+                          Text(
+                            "Tujuan: Membantu mengembalikan fleksibilitas lutut.",
+                            textAlign: TextAlign.justify,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "1. Duduk atau berbaring dengan kaki lurus.",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "2. Perlahan geser tumit kaki yang cedera ke arah bokong sambil menekuk lutut.",
+                            textAlign: TextAlign.justify,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "3. Setelah mencapai batas nyaman, luruskan kaki kembali.",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "4. Ulangi 10-15 kali, 2-3 set sehari.",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          RichText(
+                            text: TextSpan(
+                              text:
+                                  'Klik Video di bawah sini untuk lebih lanjut',
+                              style: TextStyle(color: Colors.black),
+                              children: [
+                                TextSpan(
+                                  text: 'this link',
+                                  style: TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () async {
+                                      final Uri url = Uri.parse(
+                                          'https://www.youtube.com/watch?v=IF5eDfb8afM');
+                                      if (await canLaunchUrl(url)) {
+                                        await launchUrl(url); // Open the URL
+                                      } else {
+                                        throw 'Could not launch $url';
+                                      }
+                                    },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  height: 420,
+                  color: const Color.fromARGB(255, 255, 255, 255),
+                ),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: EdgeInsets.all(20.0),
+                  child: Column(
+                    children: [
+                      Text(
+                        "4. Hip Bridges",
+                        style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.justify,
+                      ),
+                      SizedBox(
+                        height: 5,
+                      ),
+                      Column(
+                        children: [
+                          Container(
+                            width: 200,
+                            // child: Image.asset(""),
+                          ),
+                          SizedBox(
+                            height: 5,
+                          ),
+                          Text(
+                            "Tujuan: Menguatkan otot glute dan paha belakang.",
+                            textAlign: TextAlign.justify,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "1. Berbaring telentang dengan lutut ditekuk dan kaki rata di lantai.",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "2. Angkat pinggul Anda ke atas hingga tubuh membentuk garis lurus dari bahu hingga lutut.",
+                            textAlign: TextAlign.justify,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "3. Tahan selama beberapa detik, lalu turunkan perlahan.",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "4. Lakukan 10-15 repetisi, 2-3 set sehari.",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          RichText(
+                            text: TextSpan(
+                              text:
+                                  'Klik Video di bawah sini untuk lebih lanjut',
+                              style: TextStyle(color: Colors.black),
+                              children: [
+                                TextSpan(
+                                  text: 'this link',
+                                  style: TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () async {
+                                      final Uri url = Uri.parse(
+                                          'https://www.youtube.com/watch?v=IF5eDfb8afM');
+                                      if (await canLaunchUrl(url)) {
+                                        await launchUrl(url); // Open the URL
+                                      } else {
+                                        throw 'Could not launch $url';
+                                      }
+                                    },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  height: 420,
+                  color: const Color.fromARGB(255, 255, 255, 255),
+                ),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: EdgeInsets.all(20.0),
+                  child: Column(
+                    children: [
+                      Text(
+                        "5. Standing Hamstring Curls",
+                        style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.justify,
+                      ),
+                      SizedBox(
+                        height: 5,
+                      ),
+                      Column(
+                        children: [
+                          Container(
+                            width: 200,
+                            // child: Image.asset(""),
+                          ),
+                          SizedBox(
+                            height: 5,
+                          ),
+                          Text(
+                            "Tujuan: Menguatkan otot hamstring.",
+                            textAlign: TextAlign.justify,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "1. Berdiri tegak dengan tangan bertumpu pada sesuatu untuk keseimbangan.",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "2. Tekuk lutut yang cedera, angkat tumit ke arah bokong.",
+                            textAlign: TextAlign.justify,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "3. Turunkan kaki kembali ke posisi semula.",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "4. Ulangi 10-15 kali, 2-3 set sehari.",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          RichText(
+                            text: TextSpan(
+                              text:
+                                  'Klik Video di bawah sini untuk lebih lanjut',
+                              style: TextStyle(color: Colors.black),
+                              children: [
+                                TextSpan(
+                                  text: 'this link',
+                                  style: TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () async {
+                                      final Uri url = Uri.parse(
+                                          'https://www.youtube.com/watch?v=IF5eDfb8afM');
+                                      if (await canLaunchUrl(url)) {
+                                        await launchUrl(url); // Open the URL
+                                      } else {
+                                        throw 'Could not launch $url';
+                                      }
+                                    },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  height: 420,
+                  color: const Color.fromARGB(255, 255, 255, 255),
+                ),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: EdgeInsets.all(20.0),
+                  child: Column(
+                    children: [
+                      Text(
+                        "6. Wall Squats",
+                        style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.justify,
+                      ),
+                      SizedBox(
+                        height: 5,
+                      ),
+                      Column(
+                        children: [
+                          Container(
+                            width: 200,
+                            // child: Image.asset(""),
+                          ),
+                          SizedBox(
+                            height: 5,
+                          ),
+                          Text(
+                            "Tujuan: Menguatkan otot quadriceps dan otot sekitar lutut.\n PS: Setelah diizinkan oleh dokter/fisioterapis",
+                            textAlign: TextAlign.justify,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "1. Berdiri dengan punggung menempel di dinding dan kaki sedikit ke depan.",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "2. Turun perlahan seperti duduk di kursi, tetapi hanya hingga sudut lutut tidak melebihi 90 derajat.",
+                            textAlign: TextAlign.justify,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "3. Tahan selama 5-10 detik, kemudian kembali berdiri.",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          Text(
+                            "4. Ulangi 10-15 kali, 2-3 set sehari.",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          RichText(
+                            text: TextSpan(
+                              text:
+                                  'Klik Video di bawah sini untuk lebih lanjut',
+                              style: TextStyle(color: Colors.black),
+                              children: [
+                                TextSpan(
+                                  text: 'this link',
+                                  style: TextStyle(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () async {
+                                      final Uri url = Uri.parse(
+                                          'https://www.youtube.com/watch?v=IF5eDfb8afM');
+                                      if (await canLaunchUrl(url)) {
+                                        await launchUrl(url); // Open the URL
+                                      } else {
+                                        throw 'Could not launch $url';
+                                      }
+                                    },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  height: 420,
+                  color: const Color.fromARGB(255, 255, 255, 255),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "789546429409",
+    "firebase_url": "https://fitbuddy-9c867-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "fitbuddy-9c867",
+    "storage_bucket": "fitbuddy-9c867.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:789546429409:android:6fa2d5c5a03ecc4f8080a0",
+        "android_client_info": {
+          "package_name": "com.example.fitbuddy2"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "789546429409-m11o9m2a5mfihs6n742kd2a0pa6nta6j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.fitbuddy2",
+            "certificate_hash": "737b39d90e7e81201e3e5e7ac75f67e5f9bbd3fa"
+          }
+        },
+        {
+          "client_id": "789546429409-d0g65fdai4l0ihstq0vpabd9i097m42q.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyASL5PGXtG_ngzFb4OIMQx80wWLNqWH4pM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "789546429409-d0g65fdai4l0ihstq0vpabd9i097m42q.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
